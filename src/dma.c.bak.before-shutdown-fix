@@ -4,7 +4,6 @@
  */
 
 #include <linux/dma-mapping.h>
-#include <linux/kernel.h>
 #include "mt76.h"
 #include "dma.h"
 
@@ -1171,17 +1170,7 @@ void mt76_dma_cleanup(struct mt76_dev *dev)
 
 	mt76_free_pending_txwi(dev);
 	mt76_free_pending_rxwi(dev);
-	/*
-	 * MT7902 backport shutdown workaround:
-	 * On this setup, PCI shutdown path reaches mt76_dma_cleanup(),
-	 * and free_netdev() may oops in dev_addr_flush().
-	 *
-	 * Keep normal module remove cleanup unchanged, but skip freeing
-	 * these dummy NAPI netdevs during system shutdown/reboot.
-	 */
-	if (system_state == SYSTEM_RUNNING) {
-		free_netdev(dev->napi_dev);
-		free_netdev(dev->tx_napi_dev);
-	}
+	free_netdev(dev->napi_dev);
+	free_netdev(dev->tx_napi_dev);
 }
 EXPORT_SYMBOL_GPL(mt76_dma_cleanup);
