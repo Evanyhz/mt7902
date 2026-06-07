@@ -24,7 +24,9 @@ DNS：正常
 
 ## 新增DKMS 安装（手动安装在后）
 
-当前推荐使用 DKMS 管理 `btusb` 和 `btmtk` 模块。这样内核升级后，系统会自动尝试重新编译并安装蓝牙驱动。
+## DKMS 安装
+
+当前推荐使用 DKMS 管理 `mt7902e` 模块。这样内核升级后，系统会自动尝试重新编译并安装驱动。
 
 ### 安装依赖
 
@@ -36,15 +38,16 @@ sudo apt install -y dkms build-essential linux-headers-$(uname -r)
 ### 安装 DKMS
 
 ```bash
-sudo rm -rf /usr/src/mt7902-bt-1.0
-sudo mkdir -p /usr/src/mt7902-bt-1.0
-sudo cp -a . /usr/src/mt7902-bt-1.0/
+sudo rm -rf /usr/src/mt7902e-wifi-1.0
+sudo mkdir -p /usr/src/mt7902e-wifi-1.0
+sudo cp -a . /usr/src/mt7902e-wifi-1.0/
 
-sudo dkms remove mt7902-bt/1.0 --all 2>/dev/null || true
-sudo dkms add -m mt7902-bt -v 1.0
-sudo dkms build -m mt7902-bt -v 1.0
-sudo dkms install -m mt7902-bt -v 1.0
+sudo dkms remove mt7902e-wifi/1.0 --all 2>/dev/null || true
+sudo dkms add -m mt7902e-wifi -v 1.0
+sudo dkms build -m mt7902e-wifi -v 1.0
+sudo dkms install -m mt7902e-wifi -v 1.0
 
+sudo make install_fw
 sudo depmod -a
 sudo update-initramfs -u -k all
 sudo reboot
@@ -53,35 +56,31 @@ sudo reboot
 ### 验证
 
 ```bash
-dkms status | grep mt7902-bt
-modinfo -n btusb
-modinfo -n btmtk
-bluetoothctl list
+dkms status | grep mt7902e-wifi
+modinfo -n mt7902e
+lspci -nnk -d 14c3:7902
+nmcli device status
 ```
 
 正常应看到：
 
 ```text
-mt7902-bt/1.0, <kernel>, x86_64: installed
-/lib/modules/<kernel>/updates/dkms/btusb.ko
-/lib/modules/<kernel>/updates/dkms/btmtk.ko
-Controller xx:xx:xx:xx:xx:xx
+mt7902e-wifi/1.0, <kernel>, x86_64: installed
+Kernel driver in use: mt7902e
+wlp8s0    wifi
 ```
 
-如果 `modinfo -n btusb` 或 `modinfo -n btmtk` 仍指向：
+### 内核升级后
 
-```text
-/lib/modules/<kernel>/kernel/drivers/bluetooth/
-```
-
-说明 DKMS 模块没有被优先加载，需要重新执行：
+如果内核升级后 Wi-Fi 没有自动恢复，执行：
 
 ```bash
-sudo dkms install -m mt7902-bt -v 1.0 -k "$(uname -r)" --force
+sudo dkms autoinstall
 sudo depmod -a
-sudo update-initramfs -u -k "$(uname -r)"
+sudo update-initramfs -u -k all
 sudo reboot
 ```
+
 
 
 ## 安装步骤
