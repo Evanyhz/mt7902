@@ -22,6 +22,68 @@ DNS：正常
 联网：正常
 ```
 
+## 新增DKMS 安装（手动安装在后）
+
+当前推荐使用 DKMS 管理 `btusb` 和 `btmtk` 模块。这样内核升级后，系统会自动尝试重新编译并安装蓝牙驱动。
+
+### 安装依赖
+
+```bash
+sudo apt update
+sudo apt install -y dkms build-essential linux-headers-$(uname -r)
+```
+
+### 安装 DKMS
+
+```bash
+sudo rm -rf /usr/src/mt7902-bt-1.0
+sudo mkdir -p /usr/src/mt7902-bt-1.0
+sudo cp -a . /usr/src/mt7902-bt-1.0/
+
+sudo dkms remove mt7902-bt/1.0 --all 2>/dev/null || true
+sudo dkms add -m mt7902-bt -v 1.0
+sudo dkms build -m mt7902-bt -v 1.0
+sudo dkms install -m mt7902-bt -v 1.0
+
+sudo depmod -a
+sudo update-initramfs -u -k all
+sudo reboot
+```
+
+### 验证
+
+```bash
+dkms status | grep mt7902-bt
+modinfo -n btusb
+modinfo -n btmtk
+bluetoothctl list
+```
+
+正常应看到：
+
+```text
+mt7902-bt/1.0, <kernel>, x86_64: installed
+/lib/modules/<kernel>/updates/dkms/btusb.ko
+/lib/modules/<kernel>/updates/dkms/btmtk.ko
+Controller xx:xx:xx:xx:xx:xx
+```
+
+如果 `modinfo -n btusb` 或 `modinfo -n btmtk` 仍指向：
+
+```text
+/lib/modules/<kernel>/kernel/drivers/bluetooth/
+```
+
+说明 DKMS 模块没有被优先加载，需要重新执行：
+
+```bash
+sudo dkms install -m mt7902-bt -v 1.0 -k "$(uname -r)" --force
+sudo depmod -a
+sudo update-initramfs -u -k "$(uname -r)"
+sudo reboot
+```
+
+
 ## 安装步骤
 
 ### 1. 安装依赖
